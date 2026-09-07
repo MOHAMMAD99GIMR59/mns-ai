@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no">
+
+<meta name="theme-color"
+      content="#080a10">
+
+<title>MNS AI</title>
+
+<link rel="stylesheet"
+      href="style.css">
+
+<!-- ================= CHAT HISTORY STYLE ================= -->
+<style>
+
+.mns-history-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+}
+
+.mns-history-panel.show {
+    display: block;
+}
+
+.mns-history-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.58);
+    backdrop-filter: blur(3px);
+}
+
+.mns-history-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: min(88vw, 360px);
+    height: 100%;
+    background: #0b0e16;
+    border-left: 1px solid rgba(124,58,237,.35);
+    box-shadow: -12px 0 40px rgba(0,0,0,.55);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform .25s ease;
+    overflow: hidden;
+}
+
+.mns-history-panel.show .mns-history-drawer {
+    transform: translateX(0);
+}
+
+.mns-history-head {
+    padding: 22px 18px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.mns-history-head small {
+    color: #8b5cf6;
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+.mns-history-head h2 {
+    margin: 5px 0 0;
+    color: #fff;
+    font-size: 20px;
+}
+
+.mns-history-close {
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255,255,255,.06);
+    color: #fff;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.mns-history-new {
+    margin: 15px;
+    padding: 13px 15px;
+    border: 1px solid rgba(124,58,237,.45);
+    border-radius: 13px;
+    background: linear-gradient(
+        135deg,
+        rgba(124,58,237,.28),
+        rgba(37,99,235,.18)
+    );
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.mns-history-new:active {
+    transform: scale(.98);
+}
+
+.mns-history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 12px 20px;
+}
+
+.mns-history-empty {
+    text-align: center;
+    color: rgba(255,255,255,.45);
+    padding: 45px 20px;
+    font-size: 13px;
+}
+
+.mns-history-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 12px 10px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: rgba(255,255,255,.035);
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+.mns-history-item:hover {
+    background: rgba(255,255,255,.07);
+}
+
+.mns-history-item.active {
+    background: rgba(124,58,237,.16);
+    border-color: rgba(124,58,237,.42);
+}
+
+.mns-history-main {
+    min-width: 0;
+    flex: 1;
+}
+
+.mns-history-title {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mns-history-time {
+    margin-top: 5px;
+    color: rgba(255,255,255,.38);
+    font-size: 10px;
+}
+
+.mns-history-delete {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 9px;
+    background: rgba(255,70,70,.08);
+    color: #ff7777;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.mns-history-delete:hover {
+    background: rgba(255,70,70,.18);
+}
+
+body.light .mns-history-drawer {
+    background: #f5f6fa;
+    border-left-color: rgba(124,58,237,.25);
+}
+
+body.light .mns-history-head h2 {
+    color: #151722;
+}
+
+body.light .mns-history-close {
+    background: rgba(0,0,0,.06);
+    color: #151722;
+}
+
+body.light .mns-history-item {
+    background: rgba(0,0,0,.035);
+}
+
+body.light .mns-history-item.active {
+    background: rgba(124,58,237,.12);
+}
+
+body.light .mns-history-title {
+    color: #171923;
+}
+
+body.light .mns-history-time {
+    color: rgba(0,0,0,.42);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- =====================================================
+     AUTH SCREEN
+===================================================== -->
+
+<div id="authScreen"
+     class="auth-screen">
+
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            MNS
+        </div>
+
+        <h1>
+            MNS AI
+        </h1>
+
+        <p class="auth-subtitle">
+            حساب کاربری خودت را بساز
+        </p>
+
+
+        <!-- LOGIN -->
+
+        <div id="loginForm"
+             class="auth-form">
+
+            <h2>
+                ورود به حساب
+            </h2>
+
+            <input
+                id="loginUsername"
+                type="text"
+                placeholder="نام کاربری"
+                autocomplete="username">
+
+            <input
+                id="loginPassword"
+                type="password"
+                placeholder="رمز عبور"
+                autocomplete="current-password">
+
+            <button
+                id="loginBtn"
+                class="auth-main-btn">
+
+                ورود
+
+            </button>
+
+            <p class="auth-switch">
+
+                حساب نداری؟
+
+                <button
+                    id="showRegisterBtn"
+                    type="button">
+
+                    ثبت‌نام
+
+                </button>
+
+            </p>
+
+        </div>
+
+
+        <!-- REGISTER -->
+
+        <div id="registerForm"
+             class="auth-form"
+             style="display:none;">
+
+            <h2>
+                ساخت حساب
+            </h2>
+
+            <input
+                id="registerUsername"
+                type="text"
+                placeholder="نام کاربری"
+                autocomplete="username">
+
+            <input
+                id="registerPassword"
+                type="password"
+                placeholder="رمز عبور"
+                autocomplete="new-password">
+
+            <input
+                id="registerPassword2"
+                type="password"
+                placeholder="تکرار رمز عبور"
+                autocomplete="new-password">
+
+            <button
+                id="registerBtn"
+                class="auth-main-btn">
+
+                ساخت حساب
+
+            </button>
+
+            <p class="auth-switch">
+
+                قبلاً حساب ساختی؟
+
+                <button
+                    id="showLoginBtn"
+                    type="button">
+
+                    ورود
+
+                </button>
+
+            </p>
+
+        </div>
+
+
+        <div id="authMessage"
+             class="auth-message">
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     MAIN APP
+===================================================== -->
+
+<div id="mainApp"
+     class="app"
+     style="display:none;">
+
+<!-- ================= HEADER ================= -->
+
+<header class="topbar">
+
+    <div class="brand">
+
+        <div class="logo">
+            M
+        </div>
+
+        <div class="brand-text">
+
+            <h1>
+                MNS AI
+            </h1>
+
+            <div class="online">
+
+                <span class="online-dot"></span>
+
+                آنلاین
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="header-actions">
+
+        <!-- HISTORY BUTTON -->
+        <button
+            id="historyBtn"
+            class="header-btn"
+            title="تاریخچه گفتگوها">
+
+            ☰
+
+        </button>
+
+
+        <button
+            id="newChatBtn"
+            class="header-btn"
+            title="گفتگوی جدید">
+
+            ＋
+
+        </button>
+
+
+        <button
+            id="clearBtn"
+            class="header-btn"
+            title="پاک کردن گفتگو">
+
+            🗑️
+
+        </button>
+
+    </div>
+
+</header>
+
+
+<!-- ================= CHAT ================= -->
+
+<main id="chat"
+      class="chat">
+
+    <section id="welcome"
+             class="welcome">
+
+        <div class="hero-logo">
+
+            <span>
+                MNS
+            </span>
+
+        </div>
+
+
+        <h2>
+            سلام! من MNS AI هستم 🤖
+        </h2>
+
+
+        <p>
+            دستیار هوش مصنوعی اختصاصی محمد
+        </p>
+
+
+        <div class="quick-title">
+            از کجا شروع کنیم؟
+        </div>
+
+
+        <div class="suggestions">
+
+            <button class="suggestion">
+                🎮 درباره بازی کمکم کن
+            </button>
+
+            <button class="suggestion">
+                💻 یک برنامه بسازیم
+            </button>
+
+            <button class="suggestion">
+                🎨 یک ایده برای بازی بده
+            </button>
+
+            <button class="suggestion">
+                💡 یک ایده خفن بده
+            </button>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<!-- ================= INPUT ================= -->
+
+<footer class="input-area">
+
+    <div class="input-box">
+
+        <button
+            id="imageBtn"
+            class="tool-btn"
+            title="ساخت تصویر">
+
+            🖼️
+
+        </button>
+
+
+        <textarea
+            id="messageInput"
+            rows="1"
+            autocomplete="off"
+            placeholder="پیامت را برای MNS بنویس..."></textarea>
+
+
+        <button
+            id="sendBtn"
+            class="send-btn"
+            title="ارسال">
+
+            ➤
+
+        </button>
+
+    </div>
+
+
+    <div class="hint">
+        MNS AI • ساخته شده توسط محمد
+    </div>
+
+</footer>
+
+
+<!-- ================= SETTINGS ================= -->
+
+<div id="settingsPanel"
+     class="settings-panel">
+
+    <div class="settings-card">
+
+        <div class="settings-header">
+
+            <h2>
+                تنظیمات
+            </h2>
+
+            <button
+                id="closeSettingsBtn"
+                class="close-btn">
+
+                ×
+
+            </button>
+
+        </div>
+
+
+        <div class="setting-item">
+
+            <div>
+
+                <strong>
+                    تم برنامه
+                </strong>
+
+                <small>
+                    ظاهر MNS AI
+                </small>
+
+            </div>
+
+
+            <select id="themeSelect">
+
+                <option value="dark">
+                    تاریک
+                </option>
+
+                <option value="light">
+                    روشن
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="setting-item">
+
+            <div>
+
+                <strong>
+                    اندازه متن
+                </strong>
+
+                <small>
+                    اندازه پیام‌ها
+                </small>
+
+            </div>
+
+
+            <select id="fontSelect">
+
+                <option value="small">
+                    کوچک
+                </option>
+
+                <option value="normal"
+                        selected>
+                    معمولی
+                </option>
+
+                <option value="large">
+                    بزرگ
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- MESSAGE COLOR -->
+
+        <div class="setting-item">
+
+            <div>
+
+                <strong>
+                    رنگ پیام من
+                </strong>
+
+                <small>
+                    رنگ حباب پیام‌های شما
+                </small>
+
+            </div>
+
+
+            <div class="color-options">
+
+                <button
+                    class="color-option purple"
+                    data-color="purple"
+                    title="بنفش">
+                </button>
+
+                <button
+                    class="color-option blue"
+                    data-color="blue"
+                    title="آبی">
+                </button>
+
+                <button
+                    class="color-option yellow"
+                    data-color="yellow"
+                    title="زرد">
+                </button>
+
+                <button
+                    class="color-option green"
+                    data-color="green"
+                    title="سبز">
+                </button>
+
+                <button
+                    class="color-option red"
+                    data-color="red"
+                    title="قرمز">
+                </button>
+
+                <button
+                    class="color-option pink"
+                    data-color="pink"
+                    title="صورتی">
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- CODING MODE -->
+
+        <div class="setting-item">
+
+            <div>
+
+                <strong>
+                    حالت کدنویسی
+                </strong>
+
+                <small>
+                    پاسخ‌های بهتر برای برنامه‌نویسی
+                </small>
+
+            </div>
+
+
+            <label class="switch">
+
+                <input
+                    type="checkbox"
+                    id="codingMode">
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+
+        <!-- ACCOUNT -->
+
+        <div class="setting-item">
+
+            <div>
+
+                <strong>
+                    حساب کاربری
+                </strong>
+
+                <small id="accountUsername">
+                    کاربر
+                </small>
+
+            </div>
+
+
+            <button
+                id="logoutBtn"
+                class="header-btn">
+
+                خروج
+
+            </button>
+
+        </div>
+
+
+        <div class="about-box">
+
+            <div class="about-logo">
+                MNS
+            </div>
+
+            <div>
+
+                <strong>
+                    MNS AI
+                </strong>
+
+                <p>
+                    هوش مصنوعی اختصاصی محمد
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ================= CHAT HISTORY ================= -->
+
+<div id="chatHistoryPanel"
+     class="mns-history-panel">
+
+    <div id="historyOverlay"
+         class="mns-history-overlay">
+    </div>
+
+    <aside class="mns-history-drawer">
+
+        <div class="mns-history-head">
+
+            <div>
+
+                <small>
+                    MNS // ARCHIVE
+                </small>
+
+                <h2>
+                    گفتگوهای من
+                </h2>
+
+            </div>
+
+            <button
+                id="closeHistoryBtn"
+                class="mns-history-close"
+                type="button">
+
+                ×
+
+            </button>
+
+        </div>
+
+
+        <button
+            id="historyNewChatBtn"
+            class="mns-history-new"
+            type="button">
+
+            ＋ گفتگوی جدید
+
+        </button>
+
+
+        <div id="chatHistoryList"
+             class="mns-history-list">
+
+        </div>
+
+    </aside>
+
+</div>
+
+
+<!-- ================= BOTTOM MENU ================= -->
+
+<nav class="bottom-nav">
+
+    <button
+        id="homeBtn"
+        class="nav-item active">
+
+        <span>
+            ⌂
+        </span>
+
+        <small>
+            چت
+        </small>
+
+    </button>
+
+
+    <button
+        id="settingsBtn"
+        class="nav-item">
+
+        <span>
+            ⚙
+        </span>
+
+        <small>
+            تنظیمات
+        </small>
+
+    </button>
+
+</nav>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
